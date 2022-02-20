@@ -4,12 +4,13 @@ from decimal import *
 epsilon_ = 1e-10
 
 class Hyperplane():
-    def __init__(self, point, n):
+    def __init__(self, dim, point, n):
         """
         initial a hyperplane
         :param point: a point on the boundary of hyperplane
         :param n: a normal vector point to the outside of hyperplane
         """
+        self.dim = dim
         self.point = point
         self.n = n
 
@@ -30,11 +31,12 @@ class Hyperplane():
         return abs(self.signed_dist(pt))
 
 class Polygon():
-    def __init__(self, hps):
+    def __init__(self, dim, hps):
         """
         initial a polygon
         :param hps: a list of hyperplanes
         """
+        self.dim = dim
         self.hps = hps
 
     def inside(self, pt):
@@ -81,12 +83,13 @@ class Polygon():
         pass
 
 class LinearConstraint():
-    def __init__(self, A, b):
+    def __init__(self, dim, A, b):
         """
         Ax < b
         :param A:
         :param b:
         """
+        self.dim = dim
         self.A = A
         self.b = b
         pass
@@ -103,7 +106,7 @@ class LinearConstraint():
                 return False
         return True
 
-def get_linear_constraints(point, hps):
+def get_linear_constraints(dim, point, hps):
     length = len(hps)
     A = np.zeros((length, len(point)))
     b = np.zeros((length, ))
@@ -115,6 +118,6 @@ def get_linear_constraints(point, hps):
             c = -c
         A[i] = n_norm
         b[i] = c
-    return LinearConstraint(A, b)
+    return LinearConstraint(dim, A, b)
 
 

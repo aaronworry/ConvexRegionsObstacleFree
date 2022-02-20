@@ -4,12 +4,13 @@ from polygon import Hyperplane
 
 
 class Ellipsoid():
-    def __init__(self, C, d):
+    def __init__(self, dim, C, d):
         """
         initial a ellipsoid
         :param C: np.array([[], [], []]) a diagonal matrix, inflate a sphere to a ellipsoid
         :param d: np.array([, ,]) center point of the ellipsoid
         """
+        self.dim = dim
         self.C = C
         self.d = d
 
@@ -19,7 +20,7 @@ class Ellipsoid():
         :param pt: np.array() a point
         :return: distance of pt and self.d
         """
-        return np.linalg.norm(np.linalg.inv(self.C) * (pt - self.d))
+        return np.linalg.norm(np.linalg.inv(self.C).dot(pt - self.d))
 
     def inside(self, pt):
         """
@@ -63,7 +64,7 @@ class Ellipsoid():
         :return: the closest hp
         """
         closest_pt = self.closest_point(pts)
-        n = np.linalg.inv(self.C) * np.linalg.inv(self.C).T * (closest_pt - self.d)
+        n = np.linalg.inv(self.C).dot(np.linalg.inv(self.C).T).dot(closest_pt - self.d)
         n_norm = n / np.linalg.norm(n)
         return Hyperplane(closest_pt, n_norm)
 
@@ -77,7 +78,7 @@ class Ellipsoid():
         delta = Decimal(np.pi*2 / num)
         result = []
         for i in range(num):
-            point = self.C * np.array([np.cos(delta*i), np.sin(delta*i)]) + self.d
+            point = self.C.dot(np.array([np.cos(delta*i), np.sin(delta*i)])) + self.d
             result.append(point)
         return result
 
