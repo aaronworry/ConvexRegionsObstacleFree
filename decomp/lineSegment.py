@@ -1,6 +1,13 @@
 import numpy as np
 from baseDecomp import BaseDecomp
 from decimal import *
+import os, sys
+currentdir = os.path.dirname(os.path.realpath(__file__))
+parentdir = os.path.dirname(currentdir)
+sys.path.append(parentdir)
+
+from convexRegion.ellipse import Ellipsoid
+from utils import vec2_to_rotation, vec3_to_rotation
 
 
 epsilon_ = 1e-10
@@ -135,3 +142,13 @@ class LineSegment(BaseDecomp):
             obs_inside = obs_new
 
         self.ellipsoid_ = ellipsoid
+
+
+if __name__ == "__main__":
+    obs = [np.array(1., 1.), np.array(-1., 1.), np.array(-1., -1.), np.array(1., -1.)]
+    pt1 = np.array([0., 0.])
+    pt2 = np.array([0.5, 0.])
+    local_bbox = None
+
+    decomp = LineSegment(2, obs, local_bbox, pt1, pt2)
+    decomp.dilate(0)

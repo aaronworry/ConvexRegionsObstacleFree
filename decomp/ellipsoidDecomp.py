@@ -1,6 +1,13 @@
 from lineSegment import LineSegment
 import numpy as np
 
+import os, sys
+currentdir = os.path.dirname(os.path.realpath(__file__))
+parentdir = os.path.dirname(currentdir)
+sys.path.append(parentdir)
+
+from convexRegion.polygon import get_linear_constraints
+
 class EllipsoidDecomp():
     def __init__(self, dim, origin):
         self.dim = dim
