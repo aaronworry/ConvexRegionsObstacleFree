@@ -1,5 +1,6 @@
 import numpy as np
 from geometry import Ellipsoid, Polyhedron, Hyperplane
+import time
 
 ELLIPSOID_C_EPSILON = 1e-4
 
@@ -79,7 +80,7 @@ def separating_hyperplanes(obstacle_pts, ellipsoid, polyhedron):
         planes.append(plane)
 
         for j in range(n_obs):
-            if uncovered_obstacles[j] and plane.a.T.dot(obstacle_pts[:, j]) - plane.b0 >= -1 * ELLIPSOID_C_EPSILON:
+            if uncovered_obstacles[j] and plane.a.T.dot(obstacle_pts[:, j]) - plane.b0 >= 0:
                 uncovered_obstacles[j] = False
 
         uncovered_obstacles[item] = False
@@ -98,12 +99,103 @@ def separating_hyperplanes(obstacle_pts, ellipsoid, polyhedron):
 
 
 def inflate_region(problem, options, debug=None):
+    region = IRISRegion(problem.dim)
+    best_vol = ELLIPSOID_C_EPSILON ** problem.dim
+    volume = 0
+    iter = 0
+    new_poly = Polyhedron(problem.dim, None, None)
+
+    if debug:
+        debug.bounds = problem.bounds
+        debug.ellipsoid_history.append(region.ellipsoid)
+        obstacles = problem.obstacle_pts
+
+    p_time = e_time = 0
+
+    while True:
+        # cal the polyhedron
+        begin = time.time()
+        separating_hyperplanes(problem.obstacle_pts, region.ellipsoid, new_poly)
+        end = time.time()
+        p_time += (end - begin)
+
+        new_poly.appendConstraints(problem.bounds)
+
+        if options.require_containment:
+            if len(options.require_containment_points):
+                all_points_contained = True
+                for item in options.require_containment_points:
+                    if not new_poly.contains(item, 0.0):
+                        all_points_contained = False
+                        break
+            else:
+                all_points_contained = new_poly.contains(problem.seed.d_, 0.0)
+
+            if all_points_contained:
+                region.polyhedron = new_poly
+                if debug:
+                    debug.polyhedron_histroy.append(new_poly)
+            else:
+                print("break early because the start point is no longer contained in the polyhedron")
+                return region
+
+        else:
+            region.polyhedron = new_poly
+            if debug:
+                debug.polyhedron_histroy.append(new_poly)
+
+
+        # cal the ellipsoid
+        begin = time.time()
+        volume = inner_ellipsoid(region.polyhedron, region.ellipsoid)
+        end = time.time()
+        e_time += (end - begin)
+
+        if debug:
+            debug.ellipsoid_history.append(region.ellipsoid)
+
+        at_iter_limit = (options.iter_limit > 0) and (iter + 1 >= options.iter_limit)
+        insufficient_progress = (abs(volume - best_vol) / best_vol) < options.termination_threshold
+        if at_iter_limit or insufficient_progress:
+            break
+
+        best_vol = volume
+        iter += 1
+        if debug:
+            debug.iters = iter
+
+    return region
+
+
+"""
+ in iris_mosek.cpp
+ 
+ pip install mosek
+"""
+
+def extract_solution():
     pass
 
 
+def inner_ellipsoid(polyhedron, ellipsoid):
 
+    return 0
 
-# in iris_cdd.h
+"""
+others
+"""
+def dd_DDMatrix2Poly(M):
+    poly = np.zeros((len(M), len(M[0])))
+    for i in range(len(M)):
+        for j in range(len(M[0])):
+            poly[i][j] = M[i][j]
+    return poly # ?????
+
+def arg_sort(vector):
+    return [idx for idx, value in sorted(enumerate(vector), key = lambda x: x[1])]
+    # return np.argsort(vector)
+
+    # in iris_cdd.h
 def getGenerators(A, b, points, rays):
     # need ???????????????????
     dim = len(A[0])
@@ -124,37 +216,4 @@ def getGenerators(A, b, points, rays):
             rays.append(point_or_ray)
         else:
             points.append(point_or_ray)
-
-
-
-
-"""
- in iris_mosek.cpp
-"""
-
-def check_res(res):
-    pass
-
-def extract_solution():
-    pass
-
-
-def inner_ellipsoid(polyhedron, ellipsoid, existing_env=None):
-    pass
-
-"""
-others
-"""
-def dd_DDMatrix2Poly(M):
-    poly = np.zeros((len(M), len(M[0])))
-    for i in range(len(M)):
-        for j in range(len(M[0])):
-            poly[i][j] = M[i][j]
-    return poly # ?????
-
-def arg_sort(vector):
-    return [idx for idx, value in sorted(enumerate(vector), key = lambda x: x[1])]
-    # return np.argsort(vector)
-
-
 

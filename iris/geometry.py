@@ -28,7 +28,7 @@ class Ellipsoid():
     def setDEntry(self, idx, value):
         self.d_[idx] = value
 
-    def fromNSphere(self, center, radius):
+    def fromNSphere(self, center, radius=ELLIPSOID_C_EPSILON):
         dim = len(center)
         C = radius * np.eye(dim)
         return Ellipsoid(dim, C, center)
