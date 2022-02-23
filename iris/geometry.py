@@ -39,15 +39,10 @@ class Ellipsoid():
 
 
 class Hyperplane():
-    def __init__(self, dim, point, n):
-        """
-        initial a hyperplane
-        :param point: a point on the boundary of hyperplane
-        :param n: a normal vector point to the outside of hyperplane
-        """
+    def __init__(self, dim, a, b0):
         self.dim = dim
-        self.point = point
-        self.n = n
+        self.a = a
+        self.b0 = b0
 
 class Polyhedron():
     def __init__(self, dim, A, b):
