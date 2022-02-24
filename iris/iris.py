@@ -168,12 +168,6 @@ def inflate_region(problem, options, debug=None):
     return region
 
 
-"""
- in iris_mosek.cpp
- 
- pip install mosek, cvxpy
-"""
-
 def extract_solution(xx, barx, n, ndx_d, ellipsoid):
     bar_ndx = 0
     result = ellipsoid
@@ -182,10 +176,12 @@ def extract_solution(xx, barx, n, ndx_d, ellipsoid):
             if j < ellipsoid.dim and i < ellipsoid.dim:
                 result.setCEntry(i, j, barx[bar_ndx])
                 result.setCEntry(j, i, barx[bar_ndx])
-            barx += 1
+            bar_ndx += 1
     for i in range(ellipsoid.dim):
         result.setDEntry(i, xx[ndx_d[i]])
 
+def streamprinter(text):
+    print("%s" % text),
 
 def inner_ellipsoid(polyhedron, ellipsoid):
     m, n, = polyhedron.getNumberOfConstraints(), polyhedron.dim
@@ -215,22 +211,20 @@ def inner_ellipsoid(polyhedron, ellipsoid):
     nabar = n * m * n + n + n + (n * (n - 1) / 2)
     abar_ndx = 0
 
-    """
-    MSK_maketask(*env, ncon, 0, &task)
-    MSK_linkfunctotaskstream(task,MSK_STREAM_LOG,NULL,printstr)
-    MSK_appendcons(task, ncon)
-    MSK_appendvars(task, nvar)
-    """
 
-    dim_bar = [None for _ in range(2 * n)]
-    len_bar = [None for _ in range(n * (n + 1) / 2)]
+    env = mosek.Env()
+    task = env.Task(ncon, 0)
+    task.set_Stream(mosek.streamtype.log, streamprinter)
+    task.appendcons(ncon)
+    task.appendvars(nvar)
 
-    """
-    MSK_appendbarvars(task, 1, dim_bar)
-    MSK_putcj(task, ndx_t[0], 1.0)
+    dim_bar = [2 * n]
+    len_bar = [n * (n + 1) / 2]
+
+    task.appendbarvars(dim_bar)
+    task.putcj(ndx_t[0], 1.0)             # c[ndx_t[0]] = 1.0       c为系数
     for i in range(nvar):
-        MSK_putvarbound(task, i, MSK_BK_FR, -MSK_INFINITY, MSK_INFINITY)
-    """
+        task.putvarbound(i, mosek.boundkey.fr, -float('inf'), float('inf'))
 
     bara_i = [0 for _ in range(nabar)]
     bara_j = [0 for _ in range(nabar)]
@@ -243,7 +237,11 @@ def inner_ellipsoid(polyhedron, ellipsoid):
 
     con_ndx = 0
 
-    for i in range(m):
+    """
+    A :   m * (n + 1) 行
+    constraint :  m * (n + 1) 个
+    """
+    for i in range(m):           #
         # a_i.T C = [f_[i][1], ..., f_[i][n]]
         for j in range(n):
             # a_i.T C _ j = f_[i][j]
@@ -258,8 +256,10 @@ def inner_ellipsoid(polyhedron, ellipsoid):
                     bara_l[abar_ndx + k] = j
                 bara_v[abar_ndx + k] = polyhedron.A_[i][k]
             abar_ndx += n
-            subi = [None for _ in range(ndx_f[i + m * j])]
-            vali = [None for _ in range(-1)]
+            subi = [ndx_f[i + m * j]]
+            vali = [-1]
+            task.putarow(con_ndx, subi, vali)          # A[con_ndx][subi[0]] = vali[0]            n 行  1 列
+            task.putconbound(con_ndx, mosek.boundkey.fx, 0, 0)       # constraint[con_ndx] = 0  固定     n 个
             """
             MSK_putarow(task, con_ndx, 1, subi, vali)
             MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
@@ -270,12 +270,18 @@ def inner_ellipsoid(polyhedron, ellipsoid):
             vali_A_row[j] = 1
         subi_A_row[num_d] = ndx_g[i]
         vali_A_row[num_d] = 1
+        task.putarow(con_ndx, subi_A_row, vali_A_row)  # 有多少补充多少        1 行 n 列
+        task.putconbound(con_ndx, mosek.boundkey.fx, polyhedron.b_[i], polyhedron.b_[i])  # constraint[con_ndx] = polyhedron.b_[i]  固定   1 个
         """
         MSK_putarow(task, con_ndx, num_d + 1, subi_A_row.data(), vali_A_row.data())
         MSK_putconbound(task, con_ndx, MSK_BK_FX, polyhedron.getB()(i, 0), polyhedron.getB()(i, 0))
         """
         con_ndx += 1
 
+    """
+    A :   n 行 1 列
+    constraint :  n 个
+    """
     for j in range(n):
         # Xbar_[n+j][j] = z_j
         bara_i[abar_ndx] = con_ndx
@@ -285,14 +291,20 @@ def inner_ellipsoid(polyhedron, ellipsoid):
         bara_v[abar_ndx] = 1
         abar_ndx += 1
 
-        subi = [None for _ in range(ndx_z[j])]
-        vali = [None for _ in range(-1)]
+        subi = [ndx_z[j]]
+        vali = [-1]
+        task.putarow(con_ndx, subi, vali)       # n * 1
+        task.putconbound(con_ndx, mosek.boundkey.fx, 0, 0)   # n个
         """
         MSK_putarow(task, con_ndx, 1, subi, vali)
         MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
         """
         con_ndx += 1
 
+    """
+    A :   n 行 1 列
+    constraint :  n 个
+    """
     for j in range(n):
         # Xbar_[n+j][n+j] = z_j
         bara_i[abar_ndx] = con_ndx
@@ -302,18 +314,26 @@ def inner_ellipsoid(polyhedron, ellipsoid):
         bara_v[abar_ndx] = 1
         abar_ndx += 1
 
-        subi = [None for _ in range(ndx_z[j])]
-        vali = [None for _ in range(-1)]
+        subi = [ndx_z[j]]
+        vali = [-1]
+        task.putarow(con_ndx, subi, vali)  # n * 1
+        task.putconbound(con_ndx, mosek.boundkey.fx, 0, 0)  # n个
         """
         MSK_putarow(task, con_ndx, 1, subi, vali)
         MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
         """
         con_ndx += 1
 
+    """
+    A :   num_z 行 2 列
+    constraint :  num_z 个
+    """
     for j in range(n, num_z):
         # z_j = t for j > n
-        subi = [None for _ in range(ndx_z[j], ndx_t[0])]
-        vali = [None for _ in range(1, -1)]
+        subi = [ndx_z[j], ndx_t[0]]
+        vali = [1, -1]
+        task.putarow(con_ndx, subi, vali)  # num_z * 2
+        task.putconbound(con_ndx, mosek.boundkey.fx, 0, 0)  # num_z
         """
         MSK_putarow(task, con_ndx, 2, subi, vali)
         MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
@@ -321,6 +341,10 @@ def inner_ellipsoid(polyhedron, ellipsoid):
         con_ndx += 1
 
     # Off-diagonal elements of Y22 are 0
+    """
+    constraint :  n * (n - 1) / 2 个
+    A: 这 n * (n - 1) / 2 行 为空
+    """
     for k in range(n, 2*n):
         for l in range(n, k):
             bara_i[abar_ndx] = con_ndx
@@ -329,6 +353,7 @@ def inner_ellipsoid(polyhedron, ellipsoid):
             bara_l[abar_ndx] = l
             bara_v[abar_ndx] = 1
             abar_ndx += 1
+            task.putconbound(con_ndx, mosek.boundkey.fx, 0, 0)  # n * (n - 1) / 2
             """
             MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
             """
@@ -337,18 +362,30 @@ def inner_ellipsoid(polyhedron, ellipsoid):
     assert(abar_ndx==nabar)
 
     # 2^(l/2)t == s_{2l - 1}
-    subi = [None for _ in range(ndx_t[0], ndx_s[num_s - 1])]
-    vali = [None for _ in range(np.pow(2, 1/2.), -1)]
+    """
+    A: 1行2列
+    constraint :  1 个
+    """
+    subi = [ndx_t[0], ndx_s[num_s - 1]]
+    vali = [np.pow(2, 1/2.), -1]
+    task.putarow(con_ndx, subi, vali)  # 1 * 2
+    task.putconbound(con_ndx, mosek.boundkey.fx, 0, 0)  # 1
     """
     MSK_putarow(task, con_ndx, 2, subi, vali)
     MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
     """
     con_ndx += 1
 
+    """
+    A: num_s行2列
+    constraint :  num_s 个
+    """
     for j in range(num_s):
         # s_j = sprime_j
-        subi = [None for _ in range(ndx_s[j], ndx_sprime[j])]
-        vali = [None for _ in range(1, -1)]
+        subi = [ndx_s[j], ndx_sprime[j]]
+        vali = [1, -1]
+        task.putarow(con_ndx, subi, vali)  # num_s * 2
+        task.putconbound(con_ndx, mosek.boundkey.fx, 0, 0)  # num_s
         """
         MSK_putarow(task, con_ndx, 2, subi, vali)
         MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
@@ -357,6 +394,10 @@ def inner_ellipsoid(polyhedron, ellipsoid):
 
     assert (con_ndx == ncon)
 
+    """
+    x: 
+    conic constraint : 1
+    """
     csub = [0 for _ in range(3)]
     lhs_idx = 0
     for j in range(num_s):
@@ -371,50 +412,76 @@ def inner_ellipsoid(polyhedron, ellipsoid):
             csub[1] = ndx_sprime[lhs_idx + 1 - num_z]
 
         csub[2] = ndx_s[j]
+        task.appendcone(mosek.conetype.rquad, 0.0, csub)
         """
         MSK_appendcone(task, MSK_CT_RQUAD, 0.0, 3, csub)
+        conepar = 0.0, nummem = 3, 
+        
+        x = [x[csub[0]], x[csub[1]], x[csub[2]]]
+        
+        it means: 2 * x[0] * x[1] >= x[2] * x[2],  x[0] > 0, x[0] > 0
+        x = [x[0], x[1], x[2]]
         """
         lhs_idx += 2
 
+    """
+    x: 
+    conic constraint : m
+    """
     csub_f_row = [0 for _ in range(n + 1)]
     for i in range(m):
         csub_f_row[0] = ndx_g[i]
         for j in range(n):
             csub_f_row[j + 1] = ndx_f[i + m * j]
+        task.appendcone(mosek.conetype.quad, 0.0, csub_f_row)
         """
         MSK_appendcone(task, MSK_CT_QUAD, 0.0, n + 1, csub_f_row.data())
+        
+        it means: x[0] >= sqrt(x[1] ** 2 + ... + x[n] ** 2)
+        x = [x[0], x[1], x[2], ..., x[n]]
         """
 
     # Divide all off-diagonal entries of Abar by 2. This is necessary because Abar
     # is assumed by the solver to be a symmetric matrix, but we're only setting
     # its lower triangular part.
-    for i in range(nabar):
+    for i in range(nabar):     # number in A^
         if bara_k[i] != bara_l[i]:
-            bara_v[i] /= 2
+            bara_v[i] /= 2.
 
+    task.putbarablocktriplet(nabar, bara_i, bara_j, bara_k, bara_l, bara_v)
+    task.putobjsense(mosek.objsense.maximize)
     """
     MSK_putbarablocktriplet(task, nabar, bara_i.data(), bara_j.data(), bara_k.data(), bara_l.data(), bara_v.data())
+        nabar: Number of elements in the block triplet form
+        bara_i: Constraint index
+        bara_j: Symmetric matrix variable index
+        bara_k: Block row index
+        bara_l: Block column index
+        bara_v: The numerical value associated with each block triplet
+    
     MSK_putobjsense(task, MSK_OBJECTIVE_SENSE_MAXIMIZE)
     """
 
-    xx = None
-    barx = None
-    trmcode = None
-    res = mosek.optimizetrm(task, trmcode)
-    mosek.solutionsummary(task, mosek.MSK_STream_MSG)
+    task.optimize()
+    task.solutionsummary(mosek.streamtype.msg)
+    solsta = task.getsolsta(mosek.soltype.itr)
 
-    solsta = mosek.getsolsta(task, MSK_SOL_ITR)
-
-    if solsta == MSK_SOL_STA_NEAR_OPTIMAL:
+    if solsta == mosek.solsta.optimal:
+        xx = [0.] * nvar
+        barx = [0.] * len_bar[0]
+        """
         xx = mosek.calloctask(task, nvar, len(mosek.reealt))
         barx = mosek.calloctask(task, len_bar[0], len(mosek.reealt))
-        xx = mosek.getxx(task, MSK_SOL_ITR, xx)
-        barx = mosek.getbarxj(task, MSK_SOL_ITR, 0, barx)
+        """
+        task.getxx(mosek.soltype.itr, xx)                               # return x ** x
+        task.getbarxj(mosek.soltype.itr, 0, barx)           # x^_0
 
         extract_solution(xx, barx, n, ndx_d, ellipsoid)
 
     obj_val = 0
-    obj_val = mosek.getprimalobj(task, MSK_SOL_ITR, obj_val)
+    task.getprimalobj(task, mosek.soltype.itr, obj_val)
+    task.__del__()
+    env.__del__()
 
     return ellipsoid.getVolume()
 
