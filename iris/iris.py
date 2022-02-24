@@ -57,7 +57,7 @@ def tangent_plane_through_point(ellipsoid, Cinv2, x):
     return Hyperplane(len(x), nhat, nhat.T.dot(x))
 
 
-def separating_hyperplanes(obstacle_pts, ellipsoid, polyhedron):
+def separating_hyperplanes(obstacle_pts, ellipsoid):
     dim = ellipsoid.dim
     n_obs = len(obstacle_pts[0])
     Cinv = np.linalg.inv(ellipsoid.C_)
@@ -94,8 +94,7 @@ def separating_hyperplanes(obstacle_pts, ellipsoid, polyhedron):
     for i in range(row):
         A[i] = planes[i].a.T
         b[i] = planes[i].b0
-    polyhedron.A_ = A
-    polyhedron.b_ = b
+    return Polyhedron(dim, A, b)
 
 
 def inflate_region(problem, options, debug=None):
@@ -115,7 +114,7 @@ def inflate_region(problem, options, debug=None):
     while True:
         # cal the polyhedron
         begin = time.time()
-        separating_hyperplanes(problem.obstacle_pts, region.ellipsoid, new_poly)
+        new_poly = separating_hyperplanes(problem.obstacle_pts, region.ellipsoid)
         end = time.time()
         p_time += (end - begin)
 
@@ -170,14 +169,25 @@ def inflate_region(problem, options, debug=None):
 """
  in iris_mosek.cpp
  
- pip install mosek
+ pip install mosek, cvxpy
 """
 
-def extract_solution():
-    pass
+def extract_solution(xx, barx, n, ndx_d, ellipsoid):
+    bar_ndx = 0
+    result = ellipsoid
+    for j in range(2*n):
+        for i in range(j,2*n):
+            if j < ellipsoid.dim and i < ellipsoid.dim:
+                result.setCEntry(i, j, barx[bar_ndx])
+                result.setCEntry(j, i, barx[bar_ndx])
+            barx += 1
+    for i in range(ellipsoid.dim):
+        result.setDEntry(i, xx[ndx_d[i]])
 
 
 def inner_ellipsoid(polyhedron, ellipsoid):
+    m, n, = polyhedron.getNumberOfConstraints(), polyhedron.dim
+    l = np.ceil(np.log2(n))
 
     return 0
 
