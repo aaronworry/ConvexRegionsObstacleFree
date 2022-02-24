@@ -1,6 +1,8 @@
 import numpy as np
 from geometry import Ellipsoid, Polyhedron, Hyperplane
 import time
+import mosek
+import cvxpy as cp
 
 ELLIPSOID_C_EPSILON = 1e-4
 
@@ -189,7 +191,224 @@ def inner_ellipsoid(polyhedron, ellipsoid):
     m, n, = polyhedron.getNumberOfConstraints(), polyhedron.dim
     l = np.ceil(np.log2(n))
 
-    return 0
+    num_t, num_d, num_s, num_z, num_f, num_g = 1, n, np.pow(2, 1) - 1, np.pow(2, 1), m * n, m
+    num_sprime, nvar = num_s, 0
+
+    """
+    mosek.add(t)
+    mosek.add(d)
+    mosek.add(s)
+    mosek.add(sprime)
+    mosek.add(z)
+    mosek.add(f)
+    mosek.add(g)
+    """
+    ncon = n * m + m + n + n + (np.pow(2, 1) - n) + 1 + (n * (n - 1) / 2) + (np.pow(2, 1) - 1)
+    nabar = n * m * n + n + n + (n * (n - 1) / 2)
+    abar_ndx = 0
+
+    """
+    MSK_maketask(*env, ncon, 0, &task)
+    MSK_linkfunctotaskstream(task,MSK_STREAM_LOG,NULL,printstr)
+    MSK_appendcons(task, ncon)
+    MSK_appendvars(task, nvar)
+    """
+
+    dim_bar = [None for _ in range(2 * n)]
+    len_bar = [None for _ in range(n * (n + 1) / 2)]
+
+    """
+    MSK_appendbarvars(task, 1, dim_bar)
+    MSK_putcj(task, ndx_t[0], 1.0)
+    for i in range(nvar):
+        MSK_putvarbound(task, i, MSK_BK_FR, -MSK_INFINITY, MSK_INFINITY)
+    """
+
+    bara_i = [0 for _ in range(nabar)]
+    bara_j = [0 for _ in range(nabar)]
+    bara_k = [0 for _ in range(nabar)]
+    bara_l = [0 for _ in range(nabar)]
+    bara_v = [0 for _ in range(nabar)]
+
+    subi_A_row = [0 for _ in range(num_d + 1)]
+    vali_A_row = [0. for _ in range(num_d + 1)]
+
+    con_ndx = 0
+
+    for i in range(m):
+        # a_i.T C = [f_[i][1], ..., f_[i][n]]
+        for j in range(n):
+            # a_i.T C _ j = f_[i][j]
+            for k in range(n):
+                bara_i[abar_ndx + k] = con_ndx
+                bara_j[abar_ndx + k] = 0
+                if j >= k:
+                    bara_k[abar_ndx + k] = j
+                    bara_l[abar_ndx + k] = k
+                else:
+                    bara_k[abar_ndx + k] = k
+                    bara_l[abar_ndx + k] = j
+                bara_v[abar_ndx + k] = polyhedron.A_[i][k]
+            abar_ndx += n
+            subi = [None for _ in range(ndx_f[i + m * j])]
+            vali = [None for _ in range(-1)]
+            """
+            MSK_putarow(task, con_ndx, 1, subi, vali)
+            MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
+            """
+            con_ndx += 1
+        for j in range(num_d):
+            subi_A_row[j] = ndx_d[j]
+            vali_A_row[j] = 1
+        subi_A_row[num_d] = ndx_g[i]
+        vali_A_row[num_d] = 1
+        """
+        MSK_putarow(task, con_ndx, num_d + 1, subi_A_row.data(), vali_A_row.data())
+        MSK_putconbound(task, con_ndx, MSK_BK_FX, polyhedron.getB()(i, 0), polyhedron.getB()(i, 0))
+        """
+        con_ndx += 1
+
+    for j in range(n):
+        # Xbar_[n+j][j] = z_j
+        bara_i[abar_ndx] = con_ndx
+        bara_j[abar_ndx] = 0
+        bara_k[abar_ndx] = n + j
+        bara_l[abar_ndx] = j
+        bara_v[abar_ndx] = 1
+        abar_ndx += 1
+
+        subi = [None for _ in range(ndx_z[j])]
+        vali = [None for _ in range(-1)]
+        """
+        MSK_putarow(task, con_ndx, 1, subi, vali)
+        MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
+        """
+        con_ndx += 1
+
+    for j in range(n):
+        # Xbar_[n+j][n+j] = z_j
+        bara_i[abar_ndx] = con_ndx
+        bara_j[abar_ndx] = 0
+        bara_k[abar_ndx] = n + j
+        bara_l[abar_ndx] = n + j
+        bara_v[abar_ndx] = 1
+        abar_ndx += 1
+
+        subi = [None for _ in range(ndx_z[j])]
+        vali = [None for _ in range(-1)]
+        """
+        MSK_putarow(task, con_ndx, 1, subi, vali)
+        MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
+        """
+        con_ndx += 1
+
+    for j in range(n, num_z):
+        # z_j = t for j > n
+        subi = [None for _ in range(ndx_z[j], ndx_t[0])]
+        vali = [None for _ in range(1, -1)]
+        """
+        MSK_putarow(task, con_ndx, 2, subi, vali)
+        MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
+        """
+        con_ndx += 1
+
+    # Off-diagonal elements of Y22 are 0
+    for k in range(n, 2*n):
+        for l in range(n, k):
+            bara_i[abar_ndx] = con_ndx
+            bara_j[abar_ndx] = 0
+            bara_k[abar_ndx] = k
+            bara_l[abar_ndx] = l
+            bara_v[abar_ndx] = 1
+            abar_ndx += 1
+            """
+            MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
+            """
+            con_ndx += 1
+
+    assert(abar_ndx==nabar)
+
+    # 2^(l/2)t == s_{2l - 1}
+    subi = [None for _ in range(ndx_t[0], ndx_s[num_s - 1])]
+    vali = [None for _ in range(np.pow(2, 1/2.), -1)]
+    """
+    MSK_putarow(task, con_ndx, 2, subi, vali)
+    MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
+    """
+    con_ndx += 1
+
+    for j in range(num_s):
+        # s_j = sprime_j
+        subi = [None for _ in range(ndx_s[j], ndx_sprime[j])]
+        vali = [None for _ in range(1, -1)]
+        """
+        MSK_putarow(task, con_ndx, 2, subi, vali)
+        MSK_putconbound(task, con_ndx, MSK_BK_FX, 0, 0)
+        """
+        con_ndx += 1
+
+    assert (con_ndx == ncon)
+
+    csub = [0 for _ in range(3)]
+    lhs_idx = 0
+    for j in range(num_s):
+        if lhs_idx < num_z:
+            csub[0] = ndx_z[lhs_idx]
+        else:
+            csub[0] = ndx_sprime[lhs_idx - num_z]
+
+        if lhs_idx + 1 < num_z:
+            csub[1] = ndx_z[lhs_idx + 1]
+        else:
+            csub[1] = ndx_sprime[lhs_idx + 1 - num_z]
+
+        csub[2] = ndx_s[j]
+        """
+        MSK_appendcone(task, MSK_CT_RQUAD, 0.0, 3, csub)
+        """
+        lhs_idx += 2
+
+    csub_f_row = [0 for _ in range(n + 1)]
+    for i in range(m):
+        csub_f_row[0] = ndx_g[i]
+        for j in range(n):
+            csub_f_row[j + 1] = ndx_f[i + m * j]
+        """
+        MSK_appendcone(task, MSK_CT_QUAD, 0.0, n + 1, csub_f_row.data())
+        """
+
+    # Divide all off-diagonal entries of Abar by 2. This is necessary because Abar
+    # is assumed by the solver to be a symmetric matrix, but we're only setting
+    # its lower triangular part.
+    for i in range(nabar):
+        if bara_k[i] != bara_l[i]:
+            bara_v[i] /= 2
+
+    """
+    MSK_putbarablocktriplet(task, nabar, bara_i.data(), bara_j.data(), bara_k.data(), bara_l.data(), bara_v.data())
+    MSK_putobjsense(task, MSK_OBJECTIVE_SENSE_MAXIMIZE)
+    """
+
+    xx = None
+    barx = None
+    trmcode = None
+    res = mosek.optimizetrm(task, trmcode)
+    mosek.solutionsummary(task, mosek.MSK_STream_MSG)
+
+    solsta = mosek.getsolsta(task, MSK_SOL_ITR)
+
+    if solsta == MSK_SOL_STA_NEAR_OPTIMAL:
+        xx = mosek.calloctask(task, nvar, len(mosek.reealt))
+        barx = mosek.calloctask(task, len_bar[0], len(mosek.reealt))
+        xx = mosek.getxx(task, MSK_SOL_ITR, xx)
+        barx = mosek.getbarxj(task, MSK_SOL_ITR, 0, barx)
+
+        extract_solution(xx, barx, n, ndx_d, ellipsoid)
+
+    obj_val = 0
+    obj_val = mosek.getprimalobj(task, MSK_SOL_ITR, obj_val)
+
+    return ellipsoid.getVolume()
 
 """
 others
