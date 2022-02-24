@@ -191,18 +191,26 @@ def inner_ellipsoid(polyhedron, ellipsoid):
     m, n, = polyhedron.getNumberOfConstraints(), polyhedron.dim
     l = np.ceil(np.log2(n))
 
+    # 1， 2， 1， 2， 10， 5
     num_t, num_d, num_s, num_z, num_f, num_g = 1, n, np.pow(2, 1) - 1, np.pow(2, 1), m * n, m
     num_sprime, nvar = num_s, 0
 
-    """
-    mosek.add(t)
-    mosek.add(d)
-    mosek.add(s)
-    mosek.add(sprime)
-    mosek.add(z)
-    mosek.add(f)
-    mosek.add(g)
-    """
+
+    ndx_t = [nvar + i for i in range(num_t)]
+    nvar += len(ndx_t)
+    ndx_d = [nvar + i for i in range(num_d)]
+    nvar += len(ndx_d)
+    ndx_s = [nvar + i for i in range(num_s)]
+    nvar += len(ndx_s)
+    ndx_sprime = [nvar + i for i in range(num_sprime)]
+    nvar += len(ndx_sprime)
+    ndx_z = [nvar + i for i in range(num_z)]
+    nvar += len(ndx_z)
+    ndx_f = [nvar + i for i in range(num_f)]
+    nvar += len(ndx_f)
+    ndx_g = [nvar + i for i in range(num_g)]
+    nvar += len(ndx_g)
+
     ncon = n * m + m + n + n + (np.pow(2, 1) - n) + 1 + (n * (n - 1) / 2) + (np.pow(2, 1) - 1)
     nabar = n * m * n + n + n + (n * (n - 1) / 2)
     abar_ndx = 0
