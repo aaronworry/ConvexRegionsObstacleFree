@@ -1,5 +1,6 @@
 import numpy as np
 from geometry import Ellipsoid, Polyhedron, Hyperplane
+from cvx_ellipsoid import cvx_ellipsoid
 import time
 import mosek
 import cvxpy as cp
@@ -104,12 +105,11 @@ def inflate_region(problem, options, debug=None):
     best_vol = ELLIPSOID_C_EPSILON ** problem.dim
     volume = 0
     iter = 0
-    new_poly = Polyhedron(problem.dim, None, None)
 
     if debug:
         debug.bounds = problem.bounds
         debug.ellipsoid_history.append(region.ellipsoid)
-        obstacles = problem.obstacle_pts
+        debug.obstacles = problem.obstacle_pts
 
     p_time = e_time = 0
 
@@ -148,7 +148,8 @@ def inflate_region(problem, options, debug=None):
 
         # cal the ellipsoid
         begin = time.time()
-        volume = inner_ellipsoid(region.polyhedron, region.ellipsoid)
+        # volume = inner_ellipsoid(region.polyhedron, region.ellipsoid)
+        region.ellipsoid.C_, region.ellipsoid.d_, volume = cvx_ellipsoid(region.polyhedron.A_, region.polyhedron.b_)
         end = time.time()
         e_time += (end - begin)
 
@@ -168,6 +169,8 @@ def inflate_region(problem, options, debug=None):
     return region
 
 
+
+
 def extract_solution(xx, barx, n, ndx_d, ellipsoid):
     bar_ndx = 0
     result = ellipsoid
@@ -183,6 +186,7 @@ def extract_solution(xx, barx, n, ndx_d, ellipsoid):
 def streamprinter(text):
     print("%s" % text),
 
+## mosek inner_ellipsoid
 def inner_ellipsoid(polyhedron, ellipsoid):
     m, n, = polyhedron.getNumberOfConstraints(), polyhedron.dim
     l = np.ceil(np.log2(n))
@@ -485,39 +489,4 @@ def inner_ellipsoid(polyhedron, ellipsoid):
 
     return ellipsoid.getVolume()
 
-"""
-others
-"""
-def dd_DDMatrix2Poly(M):
-    poly = np.zeros((len(M), len(M[0])))
-    for i in range(len(M)):
-        for j in range(len(M[0])):
-            poly[i][j] = M[i][j]
-    return poly # ?????
-
-def arg_sort(vector):
-    return [idx for idx, value in sorted(enumerate(vector), key = lambda x: x[1])]
-    # return np.argsort(vector)
-
-    # in iris_cdd.h
-def getGenerators(A, b, points, rays):
-    # need ???????????????????
-    dim = len(A[0])
-    row = len(A)
-    hrep = np.zeros((row, dim + 1))   # [b -A]
-    for i in range(row):
-        hrep[i][0] = b[i]
-        for j in range(dim):
-            hrep[i][j + 1] = -1 * A[i][j]
-
-    generators = dd_DDMatrix2Poly(hrep)
-
-    for i in range(row):
-        point_or_ray = np.array([0 for _ in range(dim)])
-        for j in range(dim):
-            point_or_ray[j] = generators[i][j + 1]
-        if generators[i][0] == 0:
-            rays.append(point_or_ray)
-        else:
-            points.append(point_or_ray)
 
