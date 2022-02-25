@@ -49,15 +49,6 @@ class Polyhedron():
         self.dim = dim
         self.A_ = A
         self.b_ = b
-        self.dd_representation_dirty_ = True
-        self.generator_points_ = None
-        self.generator_rays_ = None
-
-    def updateDDRepresentation(self):
-        self.generator_rays_ = None
-        self.generator_points_ = None
-        getGenerators(self.A_, self.b_, self.generator_points_, self.generator_rays_)
-        self.dd_representation_dirty_ = False
 
     def getNumberOfConstraints(self):
         return len(self.b_)
@@ -66,16 +57,6 @@ class Polyhedron():
         self.A_ = np.vstack((self.A_, otherPolyhedron.A_))
         self.b_ = np.vstack((self.b_, otherPolyhedron.b_))
         self.dd_representation_dirty_ = True
-
-    def generatorPoints(self):
-        if self.dd_representation_dirty_:
-            self.updateDDRepresentation()
-        return self.generator_points_
-
-    def generatorRays(self):
-        if self.dd_representation_dirty_:
-            self.updateDDRepresentation()
-        return self.generator_rays_
 
     def contains(self, point, tolerance):
         return max(self.A_.dot(point) - self.b_) <= tolerance

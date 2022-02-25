@@ -2,8 +2,9 @@ import numpy as np
 from geometry import Ellipsoid, Polyhedron, Hyperplane
 from cvx_ellipsoid import cvx_ellipsoid
 import time
-import mosek
+from mosek_Lowner-John_ellipsoid import lownerjohn_inner
 import cvxpy as cp
+import mosek
 
 ELLIPSOID_C_EPSILON = 1e-4
 
@@ -34,7 +35,7 @@ class IRISDebugData():
 
 class IRISProblem():
     def __init__(self, dim):
-        self.obstacle_pts = []
+        self.obstacle_pts = None
         self.bounds = None
         self.dim = dim
         self.seed = None
@@ -49,7 +50,10 @@ class IRISProblem():
         self.bounds = new_bounds
 
     def addObstacle(self, new_obstacle):
-        self.obstacle_pts.append(new_obstacle)
+        if not self.obstacle_pts:
+            self.obstacle_pts = new_obstacle
+        else:
+            self.obstacle_pts = np.hstack(self.obstacle_pts, new_obstacle)
 
 
 def tangent_plane_through_point(ellipsoid, Cinv2, x):
@@ -61,6 +65,12 @@ def tangent_plane_through_point(ellipsoid, Cinv2, x):
 
 
 def separating_hyperplanes(obstacle_pts, ellipsoid):
+    """
+
+    :param obstacle_pts: shape(dim, n)  n is the number of obstacle point
+    :param ellipsoid:
+    :return:
+    """
     dim = ellipsoid.dim
     n_obs = len(obstacle_pts[0])
     Cinv = np.linalg.inv(ellipsoid.C_)
@@ -70,12 +80,12 @@ def separating_hyperplanes(obstacle_pts, ellipsoid):
         polyhedron = Polyhedron(dim, np.zeros((0, dim)), np.zeros)
     """
     planes = []
-    img_obs = obstacle_pts.T
+    img_obs = obstacle_pts.T   # [n, dim]
     img_obs = Cinv.dot(np.transpose(img_obs - ellipsoid.d_))   # [dim, n]
     image_squared = np.linalg.norm(img_obs, axis=0)                # [1, n]
     temp = list(image_squared)
     obs_sort_idx = np.argsort(temp)
-    uncovered_obstacles = [True for _ in np.traspose(obstacle_pts)]
+    uncovered_obstacles = [True for _ in range(len(temp))]
     for item in obs_sort_idx:
         if not uncovered_obstacles[item]:
             continue
@@ -149,6 +159,7 @@ def inflate_region(problem, options, debug=None):
         # cal the ellipsoid
         begin = time.time()
         # volume = inner_ellipsoid(region.polyhedron, region.ellipsoid)
+        # lownerjohn_inner(region.polyhedron.A_, region.polyhedron.b_)
         region.ellipsoid.C_, region.ellipsoid.d_, volume = cvx_ellipsoid(region.polyhedron.A_, region.polyhedron.b_)
         end = time.time()
         e_time += (end - begin)
