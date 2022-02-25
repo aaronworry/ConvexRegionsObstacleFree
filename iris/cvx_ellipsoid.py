@@ -1,5 +1,6 @@
 import numpy as np
 import cvxpy as cp
+from geometry import Ellipsoid
 
 def cvx_ellipsoid(A, b):
     dim = len(A[0])
@@ -11,8 +12,9 @@ def cvx_ellipsoid(A, b):
     constraints += [cp.atoms.norm(C @ A[i].T, 2) + A[i] @ d <= b[i] for i in range(m)]
 
     prob = cp.Problem(objective, constraints)
-    prob.solve()
-    return C.value, d.value, prob.value
+    prob.solve(verbose=True)
+    # return C.value, d.value, prob.value
+    return Ellipsoid(dim, C.value, d.value), prob.value
 
 
 if __name__ == '__main__':
@@ -28,8 +30,8 @@ if __name__ == '__main__':
     b = np.array(b)
 
     # Po, co = lownerjohn_outer(p)
-    Ci, di, volume = cvx_ellipsoid(A, b)
-    print(Ci, di, volume)
+    ellipsoid, volume = cvx_ellipsoid(A, b)
+    print(ellipsoid.C_, ellipsoid.d_, volume)
 
     #Visualization
     try:
@@ -45,6 +47,7 @@ if __name__ == '__main__':
         ax.add_patch(patches.Polygon(p, fill=False, color="red"))
         #The inner ellipse
         theta = np.linspace(0, 2 * np.pi, 100)
+        Ci, di = ellipsoid.C_, ellipsoid.d_
         x = Ci[0][0] * np.cos(theta) + Ci[0][1] * np.sin(theta) + di[0]
         y = Ci[1][0] * np.cos(theta) + Ci[1][1] * np.sin(theta) + di[1]
         ax.plot(x, y)

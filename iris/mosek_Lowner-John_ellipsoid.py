@@ -162,6 +162,7 @@ def lownerjohn_outer(x):
 
 if __name__ == '__main__':
     #Vertices of a pentagon in 2D
+    import numpy as np
     p = [[0., 0.], [1., 3.], [5.5, 4.5], [7., 4.], [7., 1.], [3., -2.]]
     nVerts = len(p)
 

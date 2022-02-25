@@ -1,5 +1,4 @@
 import numpy as np
-from iris import getGenerators
 import math
 
 ELLIPSOID_C_EPSILON = 1e-4
@@ -54,9 +53,9 @@ class Polyhedron():
         return len(self.b_)
 
     def appendConstraints(self, otherPolyhedron):
-        self.A_ = np.vstack((self.A_, otherPolyhedron.A_))
-        self.b_ = np.vstack((self.b_, otherPolyhedron.b_))
-        self.dd_representation_dirty_ = True
+        if otherPolyhedron:
+            self.A_ = np.vstack((self.A_, otherPolyhedron.A_))
+            self.b_ = np.vstack((self.b_, otherPolyhedron.b_))
 
     def contains(self, point, tolerance):
         return max(self.A_.dot(point) - self.b_) <= tolerance
