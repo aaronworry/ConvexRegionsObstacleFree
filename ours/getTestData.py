@@ -13,6 +13,20 @@ def getData():
     return data
     # testData = data.T
 
+def getData2():
+    k, b = [6, 2, -3, -1], [10, -9, 8, -7]
+    x = []
+    x.append(np.linspace(-2.3, -0.2, 41))
+    x.append(np.linspace(0.6, 3.4, 57))
+    x.append(np.linspace(-0.2, 3.4, 73))
+    x.append(np.linspace(-2.3, 0.6, 59))
+    result = []
+    for i in range(4):
+        y = k[i] * x[i] + b[i] + 4. * (np.random.rand(len(x[i])) - 0.5)
+        result.append(np.vstack((x[i], y)))
+    data = np.hstack((result[0], result[1], result[2], result[3]))
+    return data
+
 if __name__ == '__main__':
     fig = plt.figure()
     ax = fig.add_subplot(111)
