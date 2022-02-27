@@ -18,12 +18,8 @@ if __name__ == '__main__':
     ax = fig.add_subplot(111)
     data = getData()
     x = data[0]
-    temp = np.array([1] * len(x))
-    q = np.vstack((temp, x))
-    print(q, np.shape(q), q.T, np.shape(q.T))
-
     y = data[1]
-    #ax.scatter(x, y)
-    #ax.xaxis.set_visible(False)
-    #ax.yaxis.set_visible(False)
-    #fig.savefig('ellipsoid.png')
+    ax.scatter(x, y)
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+    fig.savefig('ellipsoid.png')
