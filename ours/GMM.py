@@ -19,8 +19,8 @@ def GMM(n, dim, data):
     Pi = Weight.sum(axis=0) / Weight.sum()     # [1, n]
     iter = 0
     while iter <= 100:
-        Weight, Pi = E_step(data, Mu, Sigma, Pi)
-        Mu, Sigma = M_step(data, Weight, Mu)
+        Weight= E_step(data, Mu, Sigma, Pi)
+        Pi, Mu, Sigma = M_step(data, Weight)
         iter += 1
     cluster = get_n_cluster(n, Weight, data)
     return Mu, Sigma, cluster
@@ -45,12 +45,14 @@ def E_step(X, Mu, Sigma, Pi):
     for i in range(n):
         pdfs[:, i] = Pi[i] * multivariate_normal.pdf(X.T, Mu[i], Sigma[i])
     Weight = pdfs / pdfs.sum(axis = 1).reshape(-1, 1)
-    Pi = Weight.sum(axis=0) / Weight.sum()
-    return Weight, Pi
 
-def M_step(X, Weight, Mu):
+    return Weight
+
+def M_step(X, Weight):
     n, dim, num = Weight.shape[1], len(X), len(X[0])
     Sigma = np.zeros((n, dim, dim))
+    Mu = np.zeros((n, dim))
+    Pi = Weight.sum(axis=0) / Weight.sum()
     for i in range(n):
         Mu[i] = np.average(X.T, axis=0, weights=Weight[:, i])
         Sigma[i] = np.average((X.T - Mu[i]) ** 2, axis = 0, weights = Weight[:, i])
@@ -63,7 +65,7 @@ def M_step(X, Weight, Mu):
             add_sigma += ((X.T[j] - Mu[i]) ** 2) * Weight[j, i]
         Sigma[i] = add_sigma / add
         """
-    return Mu, Sigma
+    return Pi, Mu, Sigma
 
 
 if __name__ == "__main__":
@@ -130,6 +132,7 @@ if __name__ == "__main__":
         y = k * x + t
         ax.plot(x, y, color=colors[i])
         """
+        # beta[i] = least_squares(2, np.array(cluster[i]).T)
         beta[i] = min_distance(2, np.array(cluster[i]).T)
         X = [-2, 2]
         y = [beta[i][0] - 2 * beta[i][1], beta[i][0] + 2 * beta[i][1]]
