@@ -76,29 +76,30 @@ def min_distance(dim, data):
 
 # 画图
 # beta  [4, 2]   type: np.array
-fig = plt.figure()
-bx = fig.add_subplot(121)
-# data = getData()
-data = getData2()
-beta, cluster = getLines(4, 2, data)
-x = data[0]
-y = data[1]
-bx.scatter(x, y, color='b')
-ax = fig.add_subplot(122)
-X = [-2, 2]
-y0 = [beta[0][0] - 2 * beta[0][1], beta[0][0] + 2 * beta[0][1]]
-y1 = [beta[1][0] - 2 * beta[1][1], beta[1][0] + 2 * beta[1][1]]
-y2 = [beta[2][0] - 2 * beta[2][1], beta[2][0] + 2 * beta[2][1]]
-y3 = [beta[3][0] - 2 * beta[3][1], beta[3][0] + 2 * beta[3][1]]
+if __name__ == "__main__":
+    fig = plt.figure()
+    bx = fig.add_subplot(121)
+    # data = getData(4)
+    data = getData2(4)
+    beta, cluster = getLines(4, 2, data)
+    x = data[0]
+    y = data[1]
+    bx.scatter(x, y, color='b')
+    ax = fig.add_subplot(122)
+    X = [-2, 2]
+    y0 = [beta[0][0] - 2 * beta[0][1], beta[0][0] + 2 * beta[0][1]]
+    y1 = [beta[1][0] - 2 * beta[1][1], beta[1][0] + 2 * beta[1][1]]
+    y2 = [beta[2][0] - 2 * beta[2][1], beta[2][0] + 2 * beta[2][1]]
+    y3 = [beta[3][0] - 2 * beta[3][1], beta[3][0] + 2 * beta[3][1]]
 
-ax.scatter(np.array(cluster[0]).T[0], np.array(cluster[0]).T[1], color='r')
-ax.scatter(np.array(cluster[1]).T[0], np.array(cluster[1]).T[1], color='g')
-ax.scatter(np.array(cluster[2]).T[0], np.array(cluster[2]).T[1], color='b')
-ax.scatter(np.array(cluster[3]).T[0], np.array(cluster[3]).T[1], color='y')
+    ax.scatter(np.array(cluster[0]).T[0], np.array(cluster[0]).T[1], color='r')
+    ax.scatter(np.array(cluster[1]).T[0], np.array(cluster[1]).T[1], color='g')
+    ax.scatter(np.array(cluster[2]).T[0], np.array(cluster[2]).T[1], color='b')
+    ax.scatter(np.array(cluster[3]).T[0], np.array(cluster[3]).T[1], color='y')
 
-ax.plot(X, y0, color='c')
-ax.plot(X, y1, color='c')
-ax.plot(X, y2, color='c')
-ax.plot(X, y3, color='c')
+    ax.plot(X, y0, color='c')
+    ax.plot(X, y1, color='c')
+    ax.plot(X, y2, color='c')
+    ax.plot(X, y3, color='c')
 
-plt.show()
+    plt.show()
