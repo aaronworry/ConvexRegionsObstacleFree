@@ -3,7 +3,7 @@
 
 import numpy as np
 import math
-from getTestData import getData, getData2
+from getTestData import getData, getData2, getData3
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 from scipy.stats import multivariate_normal
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         return beta
 
 
-    data = getData2(0.5)
+    data = getData3(0.1)
     Mu, Sigma, cluster = GMM(4, 2, data)
     fig = plt.figure()
     bx = fig.add_subplot(121)

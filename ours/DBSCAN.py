@@ -2,7 +2,7 @@ from sklearn.cluster import DBSCAN
 import numpy as np
 import matplotlib.pyplot as plt
 
-from getTestData import getData, getData2
+from getTestData import getData, getData2, getData3
 
 # 需要大修该算法
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         beta = np.array([y_avr - k1 * x_avr, k1])
         return beta
 
-    data = getData2(0.5)
+    data = getData3(0.1)
     clustering = DBSCAN(eps = 0.5, min_samples = 8).fit(data.T)
     labels = clustering.labels_
     cluster = get_cluster(data, labels)

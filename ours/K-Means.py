@@ -1,5 +1,5 @@
 import numpy as np
-from getTestData import getData, getData2
+from getTestData import getData, getData2, getData3
 import matplotlib.pyplot as plt
 
 ### k-means + 最小二乘法：不能保证收敛
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     fig = plt.figure()
     bx = fig.add_subplot(121)
     # data = getData(4)
-    data = getData2(4)
+    data = getData3(0.1)
     beta, cluster = getLines(4, 2, data)
     x = data[0]
     y = data[1]

@@ -27,6 +27,20 @@ def getData2(scal):
     data = np.hstack((result[0], result[1], result[2], result[3]))
     return data
 
+def getData3(scal):
+    k, b = [6, 2, -3, -1], [10, -9, 8, -7]
+    x = []
+    x.append(np.linspace(-2.2, -0.3, 39))
+    x.append(np.linspace(0.7, 3.3, 53))
+    x.append(np.linspace(-0.1, 3.3, 69))
+    x.append(np.linspace(-2.2, 0.5, 55))
+    result = []
+    for i in range(4):
+        y = k[i] * x[i] + b[i] + scal * (np.random.rand(len(x[i])) - 0.5)
+        result.append(np.vstack((x[i], y)))
+    data = np.hstack((result[0], result[1], result[2], result[3]))
+    return data
+
 if __name__ == '__main__':
     fig = plt.figure()
     ax = fig.add_subplot(111)
