@@ -25,6 +25,8 @@
         4.2列表中剩下的theta中移除2.1中被标记的点，调到2.1找下一个平面。
             4.3如果找的平面的特征，和上一个找到的平面差距特别大，即不能认为现在的这个平面是一个合理的。
 
+根据特征，选择是否合并某些直线?
+
 然后使用GMM和谱聚类的思想在初值附近找一个局部最优解  ： 已有的 compatible cluster merging
     谱聚类 + GMM的思想
 
@@ -40,5 +42,9 @@
     M-step：   求 Pi, 直线参数， Sigma
 
     收敛条件： Sigma越小越好
+
+根据特征，选择是否合并某些直线?
 """
 
+from findInitialHyperplanes import get_initial_hyperplanes
+from localOptimization import find_last_hyperplanes
