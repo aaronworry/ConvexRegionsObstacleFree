@@ -48,3 +48,11 @@
 
 from findInitialHyperplanes import get_initial_hyperplanes
 from localOptimization import find_last_hyperplanes
+from getTestData import getData, getData2, getData3
+
+def conc(hyperplanes):
+    pass
+
+if __name__ == "__main__":
+    data = getData3(0.5)
+    pre_hyperplances = get_initial_hyperplanes(data, maxSigma=2)
