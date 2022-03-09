@@ -162,7 +162,7 @@ def get_initial_hyperplanes(points, resolution=1, maxSigma=5, minNumber=20, maxH
         # 更新matrix
         Matrix, number = updateMatrix(pointID, Matrix, number)
 
-    return hyperplanes
+    return np.array(hyperplanes)
 
 
 
