@@ -45,14 +45,31 @@
 
 根据特征，选择是否合并某些直线?
 """
-
-from findInitialHyperplanes import get_initial_hyperplanes
+import numpy as np
+from findInitialHyperplanes import get_initial_hyperplanes, Point2D
 from localOptimization import find_last_hyperplanes
 from getTestData import getData, getData2, getData3
 
 def conc(hyperplanes):
     pass
 
+
+def get_n_cluster(n, Weight, data):
+    cluster = [[] for _ in range(n)]
+    for i in range(len(data[0])):
+        index = np.argmax(Weight[i])
+        cluster[index].append(data[:, i])
+    return cluster
+
+
 if __name__ == "__main__":
     data = getData3(0.5)
-    pre_hyperplances = get_initial_hyperplanes(data, maxSigma=2)
+    points = data.T
+    new_points = [Point2D(item) for item in points]
+    pre_hyperplances = get_initial_hyperplanes(points, maxSigma=2)
+
+    points_data = np.array([item.date_in_polar for item in new_points])
+    hyperplanes, Weight = find_last_hyperplanes(points, points_data, pre_hyperplances)
+    # 合并 ？
+
+

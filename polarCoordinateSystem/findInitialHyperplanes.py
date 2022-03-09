@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 
 
@@ -7,12 +8,13 @@ class Point2D():
         """
         :param point: [x, y]
         """
-        self.theta = np.atan2(point[1], point[0])
+        self.theta = math.atan2(point[1], point[0])
         self.dis = np.linalg.norm(point)
         self.define_domain = [self.theta - np.pi/2, self.theta + np.pi/2]
+        self.date_in_polar = np.array([self.dis, self.theta])
 
     def get_distance(self, theta):
-        distance = np.cos(theta - self.theta)
+        distance = self.dis * np.cos(theta - self.theta)
         if distance >= 0:
             return distance
         else:
@@ -135,10 +137,9 @@ def updateMatrix(pointID, Matrix, number):
     return result, num
 
 
-def get_initial_hyperplanes(points, resolution=1, maxSigma=5, minNumber=20, maxHyperplanes=10):
+def get_initial_hyperplanes(new_points, resolution=1, maxSigma=5, minNumber=20, maxHyperplanes=10):
     hyperplanes = []
-    point_num = len(points)
-    new_points = [Point2D(item) for item in points]
+    point_num = len(new_points)
     # points_used = [False for _ in range(point_num)]
     # multi_hyperplanes_index = []
     # single_hyperplane_index = []
