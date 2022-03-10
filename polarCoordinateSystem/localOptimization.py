@@ -9,12 +9,26 @@ def find_last_hyperplanes(points, new_points, hyperplances):
     :param hyperplances: list [hp]    m
     :return:
     """
-    iter = 0
-    while iter < 15:
-        weight = cal_weight(new_points, hyperplances)
+    last_hyperplanes = [-1 * item for item in hyperplances]
+    while whetherEnd(last_hyperplanes, hyperplances):
+        last_hyperplanes = hyperplances
+        weight = cal_weight(new_points, last_hyperplanes)
         hyperplances = update_hyperplanes(points, weight)
-        iter += 1
     return hyperplances, weight
+
+def whetherEnd(last_hyperplanes, hyperplances):
+    n = len(last_hyperplanes)
+    maxDistance = -1.
+    for i in range(n):
+        x1, y1 = last_hyperplanes[i][0] * np.cos(last_hyperplanes[i][1])
+        x2, y2 = hyperplances[i][0] * np.cos(hyperplances[i][1])
+        distance = np.sqrt((x1-x2)**2 + (y1 - y2)**2)
+        if distance >= maxDistance:
+            maxDistance = distance
+    if maxDistance > 1.:
+        return True
+    else:
+        return False
 
 
 def cal_weight(new_points, hyperplances):

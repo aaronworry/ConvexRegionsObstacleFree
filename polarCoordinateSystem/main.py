@@ -54,13 +54,17 @@ def conc(hyperplanes):
     pass
 
 
-def get_n_cluster(n, Weight, data):
-    cluster = [[] for _ in range(n)]
+def get_n_cluster(Weight, data):
+    cluster = [[] for _ in range(len(Weight[0]))]
     for i in range(len(data[0])):
         index = np.argmax(Weight[i])
         cluster[index].append(data[:, i])
     return cluster
 
+def draw(data, pre_hyperplances, hyperplanes, Weight):
+    # 3 个图片
+    # 1:所有点， 2：所有点以及pre_hyperplances对应的点（mu.cos\theta, mu.sin\theta）， 3：分类好的点和线
+    pass
 
 if __name__ == "__main__":
     data = getData3(0.5)
@@ -71,5 +75,7 @@ if __name__ == "__main__":
     points_data = np.array([item.date_in_polar for item in new_points])
     hyperplanes, Weight = find_last_hyperplanes(points, points_data, pre_hyperplances)
     # 合并 ？
+
+    draw(data, pre_hyperplances, hyperplanes, Weight)
 
 
