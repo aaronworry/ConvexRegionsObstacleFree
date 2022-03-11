@@ -49,6 +49,7 @@ import numpy as np
 from findInitialHyperplanes import get_initial_hyperplanes, Point2D
 from localOptimization import find_last_hyperplanes
 from getTestData import getData, getData2, getData3
+import matplotlib.pyplot as plt
 
 def conc(hyperplanes):
     pass
@@ -61,21 +62,62 @@ def get_n_cluster(Weight, data):
         cluster[index].append(data[:, i])
     return cluster
 
-def draw(data, pre_hyperplances, hyperplanes, Weight):
+def min_distance(data):
+    """
+    拟合直线，与直线距离最小
+    """
+    x_avr, y_avr = np.mean(data[0]), np.mean(data[1])
+    A = 0
+    B = 0
+    C = 0
+    for i in range(len(data[0])):
+        x = data[0][i] - x_avr
+        y = data[1][i] - y_avr
+        A += x * y
+        B += x * x - y * y
+        C += -1 * x * y
+    delta = np.sqrt(B * B - 4 * A * C)
+    k1, k2 = (delta - B) / (2 * A), (-1 * delta - B) / (2 * A)
+    beta = np.array([y_avr - k1 * x_avr, k1])
+    return beta
+
+def draw(data, pre_hyperplances, Weight):
     # 3 个图片
     # 1:所有点， 2：所有点以及pre_hyperplances对应的点（mu.cos\theta, mu.sin\theta）， 3：分类好的点和线
-    pass
+    fig = plt.figure()
+    bx = fig.add_subplot(121)
+    x = data[0]
+    y = data[1]
+    bx.scatter(x, y, color='b')
+    bx.scatter(0, 0, color='r')
+    for item in pre_hyperplances:
+        x = item[0] * np.cos(item[1])
+        y = item[0] * np.sin(item[1])
+        bx.scatter(x, y, color='r')
+    ax = fig.add_subplot(122)
+    cluster = get_n_cluster(Weight, data.T)
+    colors = ['r', 'g', 'b', 'y', 'c', 'm', 'k']
+    for i in range(len(cluster)):
+        if len(cluster[i]) > 0:
+            ax.scatter(np.array(cluster[i]).T[0], np.array(cluster[i]).T[1], color=colors[i%len(colors)])
+            beta = min_distance(np.array(cluster[i]).T)
+            X = [-2, 2]
+            y = [beta[0] - 2 * beta[1], beta[0] + 2 * beta[1]]
+            ax.plot(X, y, color=colors[i])
+
+    plt.show()
 
 if __name__ == "__main__":
-    data = getData3(0.5)
+    import math
+    data = getData3(0.1)
     points = data.T
     new_points = [Point2D(item) for item in points]
-    pre_hyperplances = get_initial_hyperplanes(points, maxSigma=2)
-
+    pre_hyperplances = get_initial_hyperplanes(new_points, maxSigma=0.2, minNumber=30, maxHyperplanes=4)
+    # pre_hyperplances = np.array([[10/np.sqrt(37), math.atan(6) + np.pi/2],[9/np.sqrt(5), math.atan(2)-np.pi/2],[8/np.sqrt(10), math.atan(-3)+np.pi/2],[7/np.sqrt(2), math.atan(-1)-np.pi/2]])
     points_data = np.array([item.date_in_polar for item in new_points])
     hyperplanes, Weight = find_last_hyperplanes(points, points_data, pre_hyperplances)
     # 合并 ？
-
-    draw(data, pre_hyperplances, hyperplanes, Weight)
+    # print(hyperplanes, Weight)
+    draw(data, pre_hyperplances, Weight)
 
 

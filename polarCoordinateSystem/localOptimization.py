@@ -9,6 +9,8 @@ def find_last_hyperplanes(points, new_points, hyperplances):
     :param hyperplances: list [hp]    m
     :return:
     """
+    n, m = len(new_points), len(hyperplances)
+    weight = np.zeros((n, m))
     last_hyperplanes = [-1 * item for item in hyperplances]
     while whetherEnd(last_hyperplanes, hyperplances):
         last_hyperplanes = hyperplances
@@ -20,8 +22,8 @@ def whetherEnd(last_hyperplanes, hyperplances):
     n = len(last_hyperplanes)
     maxDistance = -1.
     for i in range(n):
-        x1, y1 = last_hyperplanes[i][0] * np.cos(last_hyperplanes[i][1])
-        x2, y2 = hyperplances[i][0] * np.cos(hyperplances[i][1])
+        x1, y1 = last_hyperplanes[i][0] * np.cos(last_hyperplanes[i][1]), last_hyperplanes[i][0] * np.sin(last_hyperplanes[i][1])
+        x2, y2 = hyperplances[i][0] * np.cos(hyperplances[i][1]), hyperplances[i][0] * np.sin(hyperplances[i][1])
         distance = np.sqrt((x1-x2)**2 + (y1 - y2)**2)
         if distance >= maxDistance:
             maxDistance = distance
