@@ -112,7 +112,8 @@ def finding_max_probability_hyperplane(minNumber, point_num, array, number, maxS
                     rho_num[j] += 1
                     temp[j].append(array[i])
         for k in range(maxHyperplanes):
-            rho[k] = np.mean(np.array(temp[k]))
+            if rho_num[k] > 0:
+                rho[k] = np.mean(np.array(temp[k]))
         last_mu = mu
         mu_index = np.argsort(np.array(rho_num))[-1]
         mu = rho[mu_index]
