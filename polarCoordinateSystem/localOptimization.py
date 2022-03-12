@@ -3,7 +3,7 @@ import math
 from scipy.stats import multivariate_normal
 
 
-def find_last_hyperplanes(points, new_points, hyperplances):
+def find_last_hyperplanes(points, new_points, hyperplances, maxSigma):
     """
     :param new_points:  array [n, 2]
     :param hyperplances: list [hp]    m
@@ -12,10 +12,14 @@ def find_last_hyperplanes(points, new_points, hyperplances):
     n, m = len(new_points), len(hyperplances)
     weight = np.zeros((n, m))
     last_hyperplanes = [-1 * item for item in hyperplances]
-    while whetherEnd(last_hyperplanes, hyperplances):
+    iter = 0
+    # while whetherEnd(last_hyperplanes, hyperplances):
+    while iter < 20:
+        iter += 1
         last_hyperplanes = hyperplances
-        weight = cal_weight(new_points, last_hyperplanes)
+        weight = cal_weight(new_points, last_hyperplanes, maxSigma)
         hyperplances = update_hyperplanes(points, weight)
+    # print(weight, hyperplances)
     return hyperplances, weight
 
 def whetherEnd(last_hyperplanes, hyperplances):
@@ -33,13 +37,17 @@ def whetherEnd(last_hyperplanes, hyperplances):
         return False
 
 
-def cal_weight(new_points, hyperplances):
+def cal_weight(new_points, hyperplances, maxSigma):
     n, m = len(new_points), len(hyperplances)
     result = np.zeros((n, m))
     for i in range(n):
         for j in range(m):
             distance = abs(hyperplances[j][0] - new_points[i][0] * np.cos(hyperplances[j][1] - new_points[i][1]))
-            result[i][j] = np.exp(-1 * distance)
+            # 使用某种分布，估计weight, lmm 拉普拉斯分布？
+            if distance <= maxSigma:
+                result[i][j] = np.exp(-1 * distance)
+            else:
+                result[i][j] = 0.000001
     weight = result / result.sum(axis = 1).reshape(-1, 1)
     return weight
 

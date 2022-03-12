@@ -33,13 +33,29 @@ def get_matrix(points, resolution = 1):
     result = np.zeros((row, col))
     for i in range(row):
         for j in range(col):
-            theta = -180 + j * resolution
+            theta = (-180 + j * resolution) * np.pi / 180
             temp = points[i].get_distance(theta)
             result[i][j] = temp
             if temp > -0.1:
                 number[j] += 1
     return result, number
 
+def updateMatrix(pointID, Matrix, number):
+    result = Matrix
+    num = number
+    for item in pointID:
+        for j in range(len(number)):
+            if result[item][j] >= -0.5:
+                result[item][j] = -1
+                num[j] -= 1
+    return result, num
+
+def cal_a_hyperplane(matrix):
+    return mu, sigma, theta, pointID, terminal
+
+"""
+no use
+"""
 def max_number_and_min_variance(matrix, number, point_num, maxSigma, min_number_of_hyperplanes):
     index = []
     gkp = -1 * np.array(number)
@@ -94,7 +110,7 @@ def whether_need_more_hyperplanes(mu, sigma, ratio, number, minNumber):
     if ratio*number >= minNumber and ratio > 0.5:
         return False
     else:
-        return True
+        return False
 
 def finding_max_probability_hyperplane(minNumber, point_num, array, number, maxSigma):
     maxHyperplanes = (number // minNumber) + 1
@@ -125,51 +141,65 @@ def finding_max_probability_hyperplane(minNumber, point_num, array, number, maxS
 
     return mu, pointID
 
-def fitting_with_more_hyperplanes():
-    pass
 
-def updateMatrix(pointID, Matrix, number):
-    result = Matrix
-    num = number
-    for item in pointID:
-        for j in range(len(number)):
-            if result[item][j] >= -0.5:
-                result[item][j] = -1
-                num[j] -= 1
-    return result, num
+
+
 
 
 def get_initial_hyperplanes(new_points, resolution=1, maxSigma=0.5, minNumber=30, maxHyperplanes=10):
     hyperplanes = []
     point_num = len(new_points)
-    # points_used = [False for _ in range(point_num)]
-    # multi_hyperplanes_index = []
-    # single_hyperplane_index = []
     A, b = get_matrix(new_points, resolution)
     while True:
+        Matrix, number_list = A.copy(), b.copy()
         # 找包含点最多的theta值（可能有多个）的索引构成列表，计算方差，找方差最小的哪一个
         #            假设只有一个平面，根据上面计算的均值和方差，计算被两个平面夹住的点占总点的比率
         #  上述方法仍有局限性
-        Matrix, number_list = A.copy(), b.copy()
-        # 设置一个损失函数，找到 一个超平面 ：   统计 sigma距离内的所有点，   \alpha * 点数目function + \beta * 平均距离function
-        # 搜索： theta : [-180, 180, 1], rho:[0, max(point-originalPoint), sigma]
-        mu, sigma, ratio, number, pointID, id, breakFlag = max_number_and_min_variance(Matrix, number_list, point_num, maxSigma, minNumber)
-        print(mu, sigma, ratio, number, pointID, id, breakFlag)
+        """
+        mu, sigma, ratio, number, pointID, id, breakFlag = max_number_and_min_variance(Matrix, number_list, point_num,
+                                                                                       maxSigma, minNumber)
         if breakFlag or len(hyperplanes) >= maxHyperplanes:
             break
         theta = (id * resolution - 180) * np.pi / 180
         if whether_need_more_hyperplanes(mu, sigma, ratio, number, minNumber):
-            # 处理含平行线的
-            # fitting_with_more_hyperplanes()
-
             mu, pointID = finding_max_probability_hyperplane(minNumber, point_num, Matrix[:, id], number, maxSigma)
             hyperplanes.append(np.array([mu, theta]))
         else:
-            # 不含平行线
             hyperplanes.append(np.array([mu, theta]))
+        """
+        # 设置一个损失函数，找到 一个超平面 ：   统计 sigma距离内的所有点，   \alpha * 点数目function + \beta * 平均距离function
+        # 搜索： theta : [-180, 180, 1], rho:[0, max(point-originalPoint), sigma]
+        mu, sigma, theta, pointID, terminal = cal_a_hyperplane(Matrix)
+        if terminal:
+            break
         # 更新matrix
         A, b = updateMatrix(pointID, Matrix, number_list)
     return np.array(hyperplanes)
+
+
+if __name__ == "__main__":
+    from getTestData import getData3
+    import matplotlib.pyplot as plt
+
+    data = getData3(0.2)
+    points = data.T
+    new_points = [Point2D(item) for item in points]
+
+    matrix, number = get_matrix(new_points, resolution=5)
+    print(len(number))
+
+    fig = plt.figure()
+    bx = fig.add_subplot(111)
+    for item in matrix:
+        x = []
+        y = []
+        for j in range(len(number)):
+            if item[j] > -0.5:
+                x.append(j)
+                y.append(item[j])
+        bx.plot(x, y, 'r*')
+    plt.show()
+
 
 
 
