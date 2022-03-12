@@ -10,31 +10,20 @@ def find_last_hyperplanes(points, new_points, hyperplances, maxSigma):
     :return:
     """
     n, m = len(new_points), len(hyperplances)
-    weight = np.zeros((n, m))
-    last_hyperplanes = [-1 * item for item in hyperplances]
-    iter = 0
-    # while whetherEnd(last_hyperplanes, hyperplances):
-    while iter < 20:
-        iter += 1
+    last_weight = np.zeros((n, m))
+    while True:
+
         last_hyperplanes = hyperplances
         weight = cal_weight(new_points, last_hyperplanes, maxSigma)
         hyperplances = update_hyperplanes(points, weight)
+        d_weight = weight - last_weight
+        print(np.max(d_weight))
+        if np.max(d_weight) <= 2.:
+            break
     # print(weight, hyperplances)
     return hyperplances, weight
 
-def whetherEnd(last_hyperplanes, hyperplances):
-    n = len(last_hyperplanes)
-    maxDistance = -1.
-    for i in range(n):
-        x1, y1 = last_hyperplanes[i][0] * np.cos(last_hyperplanes[i][1]), last_hyperplanes[i][0] * np.sin(last_hyperplanes[i][1])
-        x2, y2 = hyperplances[i][0] * np.cos(hyperplances[i][1]), hyperplances[i][0] * np.sin(hyperplances[i][1])
-        distance = np.sqrt((x1-x2)**2 + (y1 - y2)**2)
-        if distance >= maxDistance:
-            maxDistance = distance
-    if maxDistance > 1.:
-        return True
-    else:
-        return False
+
 
 
 def cal_weight(new_points, hyperplances, maxSigma):
@@ -42,12 +31,9 @@ def cal_weight(new_points, hyperplances, maxSigma):
     result = np.zeros((n, m))
     for i in range(n):
         for j in range(m):
-            distance = abs(hyperplances[j][0] - new_points[i][0] * np.cos(hyperplances[j][1] - new_points[i][1]))
+            distance = np.sqrt((hyperplances[j][0] - new_points[i][0] * np.cos(hyperplances[j][1] - new_points[i][1])) ** 2)
             # 使用某种分布，估计weight, lmm 拉普拉斯分布？
-            if distance <= maxSigma:
-                result[i][j] = np.exp(-1 * distance)
-            else:
-                result[i][j] = 0.000001
+            result[i][j] = 1 / distance
     weight = result / result.sum(axis = 1).reshape(-1, 1)
     return weight
 
