@@ -118,6 +118,7 @@ def cal_score(list_A, minNumber):
     if number < minNumber:
         score = 0
     else:
+        # 需要好好考虑，如何设计此目标函数
         score = np.exp(-1 * sigma) + 0 * (number - minNumber)
     return -1 * mu, sigma, score
 

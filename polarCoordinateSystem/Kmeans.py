@@ -14,6 +14,7 @@ def getLines(hyperplane, data):
     :param n: number of lines
     :param data: obstacle position    [dim, m]
     :return: n lines:  a_n , b_n
+
     """
     #init
     beta = cal_from_hyperplane(hyperplane)

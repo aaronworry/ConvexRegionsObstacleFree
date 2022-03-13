@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+
 def getData(scal):
     k, b = [6, 2, -3, -0.8], [10, -9, 8, -7]
     x = np.array([-3 + 0.1*i for i in range(61)])
