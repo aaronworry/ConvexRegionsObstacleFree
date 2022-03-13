@@ -109,11 +109,12 @@ def draw(data, pre_hyperplances, cluster):
 
 if __name__ == "__main__":
     import math
-    data = getData3(0.1)
+    data = getData3(1)
     points = data.T
     new_points = [Point2D(item) for item in points]
-    # pre_hyperplances = get_initial_hyperplanes(new_points, resolution = 5, maxSigma=0.2, minNumber=30, maxHyperplanes=4)
-    pre_hyperplances = np.array([[10/np.sqrt(37), math.atan(6) + np.pi/2],[9/np.sqrt(5), math.atan(2)-np.pi/2],[8/np.sqrt(10), math.atan(-3)+np.pi/2],[7/np.sqrt(2), math.atan(-1)-np.pi/2]])
+    pre_hyperplances = get_initial_hyperplanes(new_points, resolution = 1, maxSigma=1, minNumber=35, maxHyperplanes=8)
+    print(pre_hyperplances)
+    # pre_hyperplances = np.array([[10/np.sqrt(37), math.atan(6) + np.pi/2],[9/np.sqrt(5), math.atan(2)-np.pi/2],[8/np.sqrt(10), math.atan(-3)+np.pi/2],[7/np.sqrt(2), math.atan(-1)-np.pi/2]])
     points_data = np.array([item.date_in_polar for item in new_points])
     hyperplanes, Weight = find_last_hyperplanes(points, points_data, pre_hyperplances, maxSigma=0.15)
     cluster = get_n_cluster(Weight, data)

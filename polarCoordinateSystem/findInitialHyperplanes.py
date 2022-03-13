@@ -38,20 +38,90 @@ def get_matrix(points, resolution = 1):
             result[i][j] = temp
             if temp > -0.1:
                 number[j] += 1
-    return result, number
+    return result.T, number
 
 def updateMatrix(pointID, Matrix, number):
     result = Matrix
     num = number
     for item in pointID:
         for j in range(len(number)):
-            if result[item][j] >= -0.5:
-                result[item][j] = -1
+            if result[j][item] >= -0.5:
+                result[j][item] = -1
                 num[j] -= 1
     return result, num
 
-def cal_a_hyperplane(matrix):
-    return mu, sigma, theta, pointID, terminal
+def cal_a_hyperplane(matrix, maxSigma, minNumber):
+    best_score = 0
+    best_pointID = []
+    best_mu = 0
+    best_sigma = 0
+    best_theta = 0
+    for i in range(len(matrix)):
+        # 求每一个theta时，得分最高的超平面
+        mu, sigma, pointID, score = find_best_hyperplane(matrix[i], maxSigma, minNumber)
+        if score >= best_score:
+            best_score = score
+            best_pointID = pointID
+            best_mu = mu
+            best_sigma = sigma
+            best_theta = i
+    if len(best_pointID) < minNumber:
+        terminal = True
+    else:
+        terminal = False
+    return best_mu, best_sigma, best_theta, best_pointID, terminal
+
+def find_best_hyperplane(vector, maxSigma, minNumber):
+    """
+    :param vector: 一个向量，在此theta下，所有点距离原点的距离。
+    :param maxSigma:
+    :param minNumber:
+    :return:
+    """
+    index_list = list(np.argsort(-1 * vector))
+    sorted_vector = np.sort(-1 * vector)
+    bound = [sorted_vector[0], sorted_vector[0]+maxSigma]
+    left_flag, right_flag, last_flag = 0, 0, len(vector)
+    mu, sigma = 0, 0
+    temp = []
+    if bound[1] > -0.5 * maxSigma:
+        bound[1] = -0.5 * maxSigma
+    for i in range(len(vector)):
+        if sorted_vector[i] <= bound[1]:
+            temp.append(sorted_vector[i])
+            right_flag = i
+        else:
+            break
+    result_mu, result_sigma, result_score = cal_score(temp, minNumber)
+    result_left, result_right = left_flag, right_flag
+    left, right = left_flag, right_flag
+    for j in range(right_flag + 1, last_flag):
+        if sorted_vector[j] > -0.5 * maxSigma:
+            break
+        bound = [sorted_vector[j] - maxSigma, sorted_vector[j]]
+        right = right + 1
+        for k in range(len(temp)):
+            if temp[k] >= bound[0]:
+                left = left + k
+                temp = temp[k:]
+                break
+        temp.append(sorted_vector[j])
+        mu, sigma, score = cal_score(temp, minNumber)
+        if score > result_score:
+            result_mu, result_sigma, result_score = mu, sigma, score
+            result_left, result_right = left, right
+    return result_mu, result_sigma, index_list[result_left: result_right+1], result_score
+
+def cal_score(list_A, minNumber):
+    vector = np.array(list_A)
+    mu, sigma, number = np.mean(vector), np.std(vector), len(list_A)
+    if number < minNumber:
+        score = 0
+    else:
+        score = np.exp(-1 * sigma) + 0 * (number - minNumber)
+    return -1 * mu, sigma, score
+
+
 
 """
 no use
@@ -169,8 +239,12 @@ def get_initial_hyperplanes(new_points, resolution=1, maxSigma=0.5, minNumber=30
         """
         # 设置一个损失函数，找到 一个超平面 ：   统计 sigma距离内的所有点，   \alpha * 点数目function + \beta * 平均距离function
         # 搜索： theta : [-180, 180, 1], rho:[0, max(point-originalPoint), sigma]
-        mu, sigma, theta, pointID, terminal = cal_a_hyperplane(Matrix)
+        mu, sigma, theta_flag, pointID, terminal = cal_a_hyperplane(Matrix, maxSigma, minNumber)
+        theta = (theta_flag * resolution - 180) * np.pi / 180
         if terminal:
+            break
+        hyperplanes.append(np.array([mu, theta]))
+        if len(hyperplanes) >= maxHyperplanes:
             break
         # 更新matrix
         A, b = updateMatrix(pointID, Matrix, number_list)
@@ -185,19 +259,19 @@ if __name__ == "__main__":
     points = data.T
     new_points = [Point2D(item) for item in points]
 
-    matrix, number = get_matrix(new_points, resolution=5)
-    print(len(number))
-
+    matrix, number = get_matrix(new_points, resolution=1)
+    for item in matrix:
+        print(find_best_hyperplane(item, 0.2, 30))
     fig = plt.figure()
     bx = fig.add_subplot(111)
-    for item in matrix:
+    for item in matrix.T:
         x = []
         y = []
         for j in range(len(number)):
             if item[j] > -0.5:
-                x.append(j)
+                x.append(j*1 - 180)
                 y.append(item[j])
-        bx.plot(x, y, 'r*')
+        bx.plot(x, y, 'r')
     plt.show()
 
 
